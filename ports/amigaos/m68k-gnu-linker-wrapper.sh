@@ -37,7 +37,9 @@ if [[ $hunk == 1 ]]; then
     # temporary, equivalent Hunk objects (and archives) before the final link.
     # Without this conversion the binary looks like a Hunk but every absolute
     # address is left relative to zero and it traps as soon as AmigaDOS runs it.
-    temporary=$(mktemp -d)
+    link_tmp_root=${M68K_LINK_TMPDIR:-${TMPDIR:-/tmp}}
+    mkdir -p -- "$link_tmp_root"
+    temporary=$(mktemp -d "$link_tmp_root/m68k-hunk-link.XXXXXX")
     trap 'rm -rf -- "$temporary"' EXIT
     tool_dir=$(dirname -- "$linker")
     objcopy="$tool_dir/m68k-amigaos-objcopy"
