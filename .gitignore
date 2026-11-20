@@ -1,6 +1,7 @@
 *~
 plan/
 /target
+/ports/amigaos/target/
 /dist
 /corpus
 /log
