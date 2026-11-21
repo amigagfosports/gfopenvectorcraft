@@ -11,8 +11,8 @@ repository = "https://github.com/AmigaGFOSPorts/gfopenvectorcraft"
 publish = false
 
 [dependencies]
-amiga-gfopenlayout = { git = "https://github.com/DalsinAI/gfopenrust", rev = "092eb2dbb59dad05ca8ff3cb056a968f5f6b9356" }
-amiga-runtime = { git = "https://github.com/DalsinAI/gfopenrust", rev = "092eb2dbb59dad05ca8ff3cb056a968f5f6b9356" }
+amiga-gfopenlayout = { git = "https://github.com/DalsinAI/gfopenrust", rev = "d71b80d0531eceac8b7d72bf9e1c21c0a810bf13" }
+amiga-runtime = { git = "https://github.com/DalsinAI/gfopenrust", rev = "d71b80d0531eceac8b7d72bf9e1c21c0a810bf13" }
 
 [profile.release]
 opt-level = "s"

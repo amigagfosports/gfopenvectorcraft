@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "amiga-gfopenlayout"
 version = "0.1.0"
-source = "git+https://github.com/DalsinAI/gfopenrust?rev=092eb2dbb59dad05ca8ff3cb056a968f5f6b9356#092eb2dbb59dad05ca8ff3cb056a968f5f6b9356"
+source = "git+https://github.com/DalsinAI/gfopenrust?rev=d71b80d0531eceac8b7d72bf9e1c21c0a810bf13#d71b80d0531eceac8b7d72bf9e1c21c0a810bf13"
 dependencies = [
  "amiga-runtime",
 ]
@@ -13,7 +13,7 @@ dependencies = [
 [[package]]
 name = "amiga-runtime"
 version = "0.1.0"
-source = "git+https://github.com/DalsinAI/gfopenrust?rev=092eb2dbb59dad05ca8ff3cb056a968f5f6b9356#092eb2dbb59dad05ca8ff3cb056a968f5f6b9356"
+source = "git+https://github.com/DalsinAI/gfopenrust?rev=d71b80d0531eceac8b7d72bf9e1c21c0a810bf13#d71b80d0531eceac8b7d72bf9e1c21c0a810bf13"
 dependencies = [
  "amiga-sys",
 ]
@@ -21,7 +21,7 @@ dependencies = [
 [[package]]
 name = "amiga-sys"
 version = "0.1.0"
-source = "git+https://github.com/DalsinAI/gfopenrust?rev=092eb2dbb59dad05ca8ff3cb056a968f5f6b9356#092eb2dbb59dad05ca8ff3cb056a968f5f6b9356"
+source = "git+https://github.com/DalsinAI/gfopenrust?rev=d71b80d0531eceac8b7d72bf9e1c21c0a810bf13#d71b80d0531eceac8b7d72bf9e1c21c0a810bf13"
 
 [[package]]
 name = "gfopenvectorcraft-amiga"

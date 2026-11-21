@@ -18,9 +18,10 @@ Included in this qualification build
 - New, Add Rectangle, Add Ellipse and Add Label actions
 - Undo, Redo, Select and Preview actions
 - bounded Rust document state
+- live native canvas, layer, status and Undo/Redo refresh after each edit
 
-The latest action is shown in the native window title. Open, Save, interactive
-zoom, complete VectorCraft file compatibility and OpenGPU rendering are RC2
-work and are not claimed by this candidate.
+The latest action is shown in the native status line and window title. Open,
+Save, interactive zoom, complete VectorCraft file compatibility and OpenGPU
+rendering are RC2 work and are not claimed by this candidate.
 
 License: MIT OR Apache-2.0

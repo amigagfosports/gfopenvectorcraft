@@ -98,6 +98,35 @@ impl Document {
         &self.paths
     }
 
+    pub fn remove_last_path(&mut self) -> Option<Path> {
+        self.paths.pop()
+    }
+
+    pub fn restore_path(&mut self, path: Path) -> Result<(), ModelError> {
+        if !self.artboards.iter().any(|artboard| artboard.id == path.artboard_id) {
+            return Err(ModelError::MissingArtboard);
+        }
+        if self.paths.len() >= self.limits.paths {
+            return Err(ModelError::PathLimit);
+        }
+        if path.id == 0 || path.id >= self.next_id || self.paths.iter().any(|existing| existing.id == path.id) {
+            return Err(ModelError::IdExhausted);
+        }
+        let minimum = if path.closed { 3 } else { 2 };
+        if path.points.len() < minimum {
+            return Err(ModelError::NotEnoughPoints);
+        }
+        if path.points.len() > self.limits.points_per_path {
+            return Err(ModelError::PointLimit);
+        }
+        if path.points.iter().any(|point| !point.x.is_finite() || !point.y.is_finite()) {
+            return Err(ModelError::InvalidPoint);
+        }
+        self.paths.try_reserve(1).map_err(|_| ModelError::OutOfMemory)?;
+        self.paths.push(path);
+        Ok(())
+    }
+
     pub fn add_artboard(&mut self, name: &str, width: f64, height: f64) -> Result<u64, ModelError> {
         if self.artboards.len() >= self.limits.artboards {
             return Err(ModelError::ArtboardLimit);
@@ -201,6 +230,30 @@ mod tests {
         assert_eq!(document.add_path(artboard, &triangle, true), Ok(2));
         assert_eq!(document.add_path(artboard, &triangle, true), Err(ModelError::PathLimit));
         assert_eq!(document.paths().len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn last_path_can_be_undone_and_restored_without_changing_its_id() -> Result<(), ModelError> {
+        let mut document = Document::new("Doc", "Artboard", 100.0, 100.0)?;
+        let artboard = document.artboards()[0].id;
+        let points = [Point { x: 1.0, y: 1.0 }, Point { x: 9.0, y: 1.0 }, Point { x: 9.0, y: 9.0 }];
+        let id = document.add_path(artboard, &points, true)?;
+        let removed = document.remove_last_path().ok_or(ModelError::MissingArtboard)?;
+        assert_eq!(removed.id, id);
+        assert!(document.paths().is_empty());
+        document.restore_path(removed)?;
+        assert_eq!(document.paths()[0].id, id);
+        Ok(())
+    }
+
+    #[test]
+    fn restore_rejects_paths_that_did_not_come_from_this_document() -> Result<(), ModelError> {
+        let mut document = Document::new("Doc", "Artboard", 100.0, 100.0)?;
+        let artboard = document.artboards()[0].id;
+        let foreign = Path { id: 99, artboard_id: artboard, points: alloc::vec![Point { x: 1.0, y: 1.0 }, Point { x: 2.0, y: 2.0 }], closed: false };
+        assert_eq!(document.restore_path(foreign), Err(ModelError::IdExhausted));
+        assert!(document.paths().is_empty());
         Ok(())
     }
 }

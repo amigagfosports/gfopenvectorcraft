@@ -15,9 +15,10 @@ properties and appearance panels. The working commands are:
 - Select and Preview mode;
 - native window close and clean AmigaDOS return (release gate; native proof required).
 
-Each command changes the bounded Rust document state and reports its result in
-the native window title. Open, Save and interactive zoom are deliberately
-disabled and labelled as RC2 work.
+Each editing command changes the bounded Rust document state and refreshes the
+native canvas, layer list, Undo/Redo controls, status line and window title.
+Open, Save and interactive zoom are deliberately disabled and labelled as RC2
+work.
 
 The packaging script creates an RC-shaped test archive, but the archive must
 not be published or promoted until native pointer actions and close have both
