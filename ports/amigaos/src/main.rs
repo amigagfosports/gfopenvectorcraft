@@ -12,7 +12,7 @@ pub mod model;
 mod platform;
 
 #[cfg(target_arch = "m68k")]
-const EDITOR_MARKUP: &core::ffi::CStr = c"<column id=app><row id=toolbar><button id=new title='Start a blank document'>New</button><button id=open title='Open SYS:VectorCraft.vcf'>Open</button><button id=save title='Save SYS:VectorCraft.vcf'>Save</button><div class=rule></div><button id=undo disabled>Undo</button><button id=redo disabled>Redo</button><div class=spacer></div><label for=zoom>Zoom</label><select id=zoom disabled title='Interactive zoom is planned for RC2'><option selected>100%</option></select></row><row id=workspace><column id=tools><div class=heading>Tools</div><button id=select class=active>Select</button><button id=rectangle>Add Rect</button><button id=ellipse>Add Ellipse</button><button id=text>Add Label</button></column><column id=center><row id=documentbar><div class=tab>VectorCraft.vcf</div><div class=spacer></div><button id=preview>Preview</button></row><div id=viewport><div id=artboard><div id=shape1 class=shape>Canvas preview</div><div id=shape2 class=shape2>Vector paths</div><div id=shape3 class=shape3 hidden>Shape palette</div><div id=shape4 class=shape4 hidden>Stroke sample</div><div id=shape5 class=label hidden>Made on Amiga</div></div></div></column><column id=inspector><div class=heading>Layers</div><div id=layer1 class='layer selected'><span class=eye>*</span> Active object</div><div id=layer2 class=layer><span class=eye>*</span> Rectangle</div><div id=layer3 class=layer hidden><span class=eye>*</span> Ellipse</div><div class=heading>Properties</div><row><label>X</label><input value='72'></row><row><label>Y</label><input value='72'></row><row><label>W</label><input value='468'></row><row><label>H</label><input value='648'></row><div class=heading>Appearance</div><row><label>Fill</label><input value='#5577cc'></row><row><label>Stroke</label><input value='#203050'></row></column></row><row id=status><div id=status_message>Ready - choose a tool to edit the document</div><div class=spacer></div><div>Native 68k</div></row></column>";
+const EDITOR_MARKUP: &core::ffi::CStr = c"<column id=app><row id=toolbar><button id=new title='Start a blank document'>New</button><button id=open title='Open VectorCraft.vcf beside the application'>Open</button><button id=save title='Save VectorCraft.vcf beside the application'>Save</button><div class=rule></div><button id=undo disabled>Undo</button><button id=redo disabled>Redo</button><div class=spacer></div><label for=zoom>Zoom</label><select id=zoom disabled title='Interactive zoom is planned for RC2'><option selected>100%</option></select></row><row id=workspace><column id=tools><div class=heading>Tools</div><button id=select class=active>Select</button><button id=rectangle>Add Rect</button><button id=ellipse>Add Ellipse</button><button id=text>Add Label</button></column><column id=center><row id=documentbar><div class=tab>VectorCraft.vcf</div><div class=spacer></div><button id=preview>Preview</button></row><div id=viewport><div id=artboard><div id=shape1 class=shape>Canvas preview</div><div id=shape2 class=shape2>Vector paths</div><div id=shape3 class=shape3 hidden>Shape palette</div><div id=shape4 class=shape4 hidden>Stroke sample</div><div id=shape5 class=label hidden>Made on Amiga</div></div></div></column><column id=inspector><div class=heading>Layers</div><div id=layer1 class='layer selected'><span class=eye>*</span> Active object</div><div id=layer2 class=layer><span class=eye>*</span> Rectangle</div><div id=layer3 class=layer hidden><span class=eye>*</span> Ellipse</div><div class=heading>Properties</div><row><label>X</label><input value='72'></row><row><label>Y</label><input value='72'></row><row><label>W</label><input value='468'></row><row><label>H</label><input value='648'></row><div class=heading>Appearance</div><row><label>Fill</label><input value='#5577cc'></row><row><label>Stroke</label><input value='#203050'></row></column></row><row id=status><div id=status_message>Ready - choose a tool to edit the document</div><div class=spacer></div><div>Native 68k</div></row></column>";
 
 #[cfg(target_arch = "m68k")]
 const EDITOR_CSS: &core::ffi::CStr = c"*{box-sizing:border-box}#app{width:100%;height:100%;background:#c8cbd0;color:#20242a}#toolbar{height:44px;padding:6px;gap:5px;background:#e4e6e9;border-bottom:1px solid #727780;align-items:center}#toolbar button{min-width:58px;height:30px}.spacer{flex:1}.rule{width:1px;height:28px;background:#9298a2;margin:0 3px}#workspace{flex:1;min-height:0}#tools{width:108px;padding:8px;gap:7px;background:#d7dade;border-right:1px solid #777d86}#tools button{height:36px;text-align:left}#tools .active{background:#496da8;color:#ffffff}#center{flex:1;min-width:0;background:#777d86}#documentbar{height:36px;padding:4px 7px;background:#d8dbe0;border-bottom:1px solid #666c74;align-items:center}.tab{padding:6px 16px;background:#f4f5f6;border:1px solid #858b94;border-bottom:0}#viewport{flex:1;padding:20px;background:#6f757d;align-items:center;justify-content:center;overflow:auto}#artboard{width:420px;height:500px;background:#ffffff;border:1px solid #34383e;box-shadow:3px 4px 8px #3e4248;position:relative}.shape,.shape2,.shape3,.shape4{position:absolute;padding:8px;text-align:center;color:#203050;background:#eef3ff;border:3px solid #5577cc}.shape{left:64px;top:62px;width:286px;height:150px}.shape2{left:155px;top:190px;width:170px;height:106px;border-radius:53px;background:#fff3d3;border-color:#c48724}.shape3{left:45px;top:310px;width:150px;height:85px;background:#e7f5ec;border-color:#3c8c61}.shape4{left:245px;top:330px;width:120px;height:75px;border-radius:38px;background:#fbe7eb;border-color:#b54b5a}.label{position:absolute;left:105px;top:430px;font-size:25px;font-weight:bold;color:#263650}#inspector{width:218px;padding:8px;gap:5px;background:#eceef0;border-left:1px solid #686e77}.heading{font-weight:bold;padding:7px 4px 4px;border-bottom:1px solid #8d939b}.layer{padding:6px;background:#ffffff;border:1px solid #b1b6bd}.layer.selected{background:#6f8fbe;color:#ffffff}.eye{margin-right:7px}#inspector row{height:30px;gap:5px;align-items:center}#inspector label{width:48px}#inspector input{flex:1;min-width:0}#status{height:30px;padding:6px 9px;background:#e2e4e7;border-top:1px solid #777d86}";
@@ -139,9 +139,9 @@ impl amiga_gfopenlayout::EventSink for EditorState<'_> {
                 return true;
             }
             bytes.resize(65_536, 0);
-            let Ok(input) = self.runtime.read_file(c"SYS:VectorCraft.vcf", bytes.as_mut_slice()) else {
+            let Ok(input) = self.runtime.read_file(c"PROGDIR:VectorCraft.vcf", bytes.as_mut_slice()) else {
                 self.title = c"VectorCraft - Open failed";
-                self.status = c"SYS:VectorCraft.vcf could not be read";
+                self.status = c"VectorCraft.vcf beside the application could not be read";
                 return true;
             };
             let input_length = input.len();
@@ -254,7 +254,7 @@ impl amiga_gfopenlayout::EventSink for EditorState<'_> {
             self.can_undo = false;
             self.redo = None;
             self.title = c"VectorCraft - Document opened";
-            self.status = c"SYS:VectorCraft.vcf opened";
+            self.status = c"VectorCraft.vcf opened from beside the application";
         } else if event.id == c"save" {
             let mut bytes = alloc::vec::Vec::new();
             if bytes.try_reserve_exact(65_536).is_err() {
@@ -268,13 +268,13 @@ impl amiga_gfopenlayout::EventSink for EditorState<'_> {
                 self.status = c"Document exceeds the bounded native VCF1 format";
                 return true;
             };
-            if self.runtime.write_file(c"SYS:VectorCraft.vcf", &bytes[..length]).is_err() {
+            if self.runtime.write_file(c"PROGDIR:VectorCraft.vcf", &bytes[..length]).is_err() {
                 self.title = c"VectorCraft - Save failed";
-                self.status = c"SYS:VectorCraft.vcf could not be written";
+                self.status = c"VectorCraft.vcf beside the application could not be written";
                 return true;
             }
             self.title = c"VectorCraft - Document saved";
-            self.status = c"SYS:VectorCraft.vcf saved";
+            self.status = c"VectorCraft.vcf saved beside the application";
         } else if event.id == c"new" {
             let Ok(document) = model::Document::new("Untitled", "Artboard 1", 420.0, 500.0) else {
                 self.title = c"VectorCraft - New document failed";

@@ -1,0 +1,16 @@
+{
+  "name": "GFOpenVectorCraft",
+  "version": "0.1.0-rc2",
+  "drawer": "VectorCraft",
+  "program": "VectorCraft",
+  "cpu": "68040",
+  "fpu": true,
+  "space": 2000000,
+  "modules": [],
+  "keep": [
+    "VectorCraft.vcf"
+  ],
+  "parent": "SYS:Utilities",
+  "badge": "../docs/brand/artcraft-mark.png",
+  "script": "Install-VectorCraft"
+}

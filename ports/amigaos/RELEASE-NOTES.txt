@@ -1,4 +1,4 @@
-GFOpenVectorCraft 0.1.0 RC1 candidate for AmigaOS 3.x
+GFOpenVectorCraft 0.1.0 RC2 candidate for AmigaOS 3.x
 ================================================================
 
 STATUS: RELEASE CANDIDATE. Native 68040 interaction, restart, persistence and
@@ -18,10 +18,11 @@ Included in this qualification build
 - GFOpenLayout/Intuition editor interface
 - New, Add Rectangle, Add Ellipse and Add Label actions
 - Undo, Redo, Select and Preview actions
-- bounded VCF1 Save and Open at SYS:VectorCraft.vcf
+- bounded VCF1 Save and Open at PROGDIR:VectorCraft.vcf
 - clean rejection of truncated or malformed VCF1 input
 - bounded Rust document state
 - live native canvas, layer, status and Undo/Redo refresh after each edit
+- generated Installer and application/drawer/ReadMe GlowIcons
 
 The latest action is shown in the native status line and window title.
 Interactive zoom, complete upstream VectorCraft file compatibility and OpenGPU

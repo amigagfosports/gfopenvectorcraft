@@ -13,8 +13,8 @@ properties and appearance panels. The working commands are:
 - Add Rectangle, Add Ellipse and Add Label;
 - Undo and Redo;
 - Select and Preview mode;
-- bounded VCF1 Save to `SYS:VectorCraft.vcf`;
-- bounded VCF1 Open from `SYS:VectorCraft.vcf`, including clean rejection of
+- bounded VCF1 Save to `PROGDIR:VectorCraft.vcf`;
+- bounded VCF1 Open from `PROGDIR:VectorCraft.vcf`, including clean rejection of
   malformed and truncated files;
 - native window close and clean AmigaDOS return (release gate; native proof required).
 
@@ -44,8 +44,8 @@ ports/amigaos/check.sh
 `ports/amigaos/build-amiga.sh` is the Kitchen entry point. It stages a plate
 containing the native executable, release notes and checksums in `$OUT`.
 
-`ports/amigaos/package-rc.sh /path/to/os32-stove` produces the install drawer, LHA
-archive and SHA-256 manifest under `dist/amigaos/`.
+`package/build-amiga.sh` builds the native program and produces the Installer,
+GlowIcons, install drawer, LHA archive and SHA-256 manifest in `$OUT`.
 
 The port is MIT OR Apache-2.0, matching VectorCraft upstream. Its GFOpenRust
 dependencies are pinned by full commit in `Cargo.toml` and `Cargo.lock`.
