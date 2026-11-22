@@ -1,0 +1,32 @@
+[workspace]
+resolver = "2"
+
+[package]
+name = "gfopenvectorcraft-amiga"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Native AmigaOS 3.x 68k platform port of VectorCraft"
+repository = "https://github.com/AmigaGFOSPorts/gfopenvectorcraft"
+publish = false
+
+[dependencies]
+amiga-gfopenlayout = { git = "https://github.com/DalsinAI/gfopenrust", rev = "7a3e3e1523e6233311fc30dc2f5a8bc51f6291e5" }
+amiga-runtime = { git = "https://github.com/DalsinAI/gfopenrust", rev = "7a3e3e1523e6233311fc30dc2f5a8bc51f6291e5" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+unimplemented = "deny"
+todo = "deny"
+unreachable = "deny"

@@ -1,6 +1,8 @@
 *~
 plan/
 /target
+/ports/amigaos/target/
+/ports/amigaos/target-hunk*/
 /dist
 /corpus
 /log

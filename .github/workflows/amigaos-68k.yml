@@ -1,0 +1,76 @@
+name: AmigaOS 68k
+
+on:
+  push:
+    branches: [main]
+    paths: ["ports/amigaos/**", ".github/workflows/amigaos-68k.yml"]
+  pull_request:
+    paths: ["ports/amigaos/**", ".github/workflows/amigaos-68k.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  M68K_LINKER: ${{ github.workspace }}/ports/amigaos/m68k-gnu-linker-wrapper.sh
+  M68K_NM: m68k-linux-gnu-nm
+  M68K_READELF: m68k-linux-gnu-readelf
+  M68K_REAL_LINKER: m68k-linux-gnu-ld
+  RUST_TOOLCHAIN: 1.98.1
+
+jobs:
+  build:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, lumavault]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned Rust toolchain
+        env:
+          RUSTUP_INIT_SHA256: 20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c
+        run: |
+          export CARGO_HOME="${RUNNER_TEMP}/cargo"
+          export RUSTUP_HOME="${RUNNER_TEMP}/rustup"
+          curl --proto '=https' --tlsv1.2 --fail --location --show-error --silent \
+            https://static.rust-lang.org/rustup/archive/1.28.2/x86_64-unknown-linux-gnu/rustup-init \
+            --output "${RUNNER_TEMP}/rustup-init"
+          echo "${RUSTUP_INIT_SHA256}  ${RUNNER_TEMP}/rustup-init" | sha256sum --check --status
+          chmod 0755 "${RUNNER_TEMP}/rustup-init"
+          "${RUNNER_TEMP}/rustup-init" -y --no-modify-path --profile minimal --default-toolchain "${RUST_TOOLCHAIN}"
+          echo "CARGO_HOME=${CARGO_HOME}" >> "${GITHUB_ENV}"
+          echo "RUSTUP_HOME=${RUSTUP_HOME}" >> "${GITHUB_ENV}"
+          echo "${CARGO_HOME}/bin" >> "${GITHUB_PATH}"
+          "${CARGO_HOME}/bin/rustup" component add rust-src rustfmt clippy
+      - name: Install m68k ELF binutils
+        env:
+          BINUTILS_SHA256: e12c81d8d7ecd645f0e6da4f536d91b3d465d2f775e914c90415108cb72b5784
+          SFRAME_SHA256: 72093fb456864db55f1352bfa5e952a94f7abaff64e71dff1fbf001db1984564
+        run: |
+          tools="${RUNNER_TEMP}/m68k-binutils"
+          mkdir -p "${tools}/packages"
+          cd "${tools}/packages"
+          curl --proto '=https' --tlsv1.2 --fail --location --show-error --silent \
+            https://security.ubuntu.com/ubuntu/pool/universe/b/binutils/binutils-m68k-linux-gnu_2.42-4ubuntu2.10_amd64.deb \
+            --output binutils-m68k-linux-gnu.deb
+          curl --proto '=https' --tlsv1.2 --fail --location --show-error --silent \
+            https://security.ubuntu.com/ubuntu/pool/main/b/binutils/libsframe1_2.42-4ubuntu2.10_amd64.deb \
+            --output libsframe1.deb
+          echo "${BINUTILS_SHA256}  binutils-m68k-linux-gnu.deb" | sha256sum --check --status
+          echo "${SFRAME_SHA256}  libsframe1.deb" | sha256sum --check --status
+          dpkg-deb --extract binutils-m68k-linux-gnu.deb "${tools}"
+          dpkg-deb --extract libsframe1.deb "${tools}"
+          echo "${tools}/usr/bin" >> "${GITHUB_PATH}"
+          echo "LD_LIBRARY_PATH=${tools}/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> "${GITHUB_ENV}"
+      - name: Verify toolchain
+        run: |
+          rustc --version --verbose
+          command -v "${M68K_NM}"
+          command -v "${M68K_READELF}"
+          command -v "${M68K_REAL_LINKER}"
+          test -x "${M68K_LINKER}"
+      - name: Build and inspect native port
+        run: ports/amigaos/check.sh

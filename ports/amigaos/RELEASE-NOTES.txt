@@ -1,0 +1,31 @@
+GFOpenVectorCraft 0.1.0 RC2 candidate for AmigaOS 3.x
+================================================================
+
+STATUS: RELEASE CANDIDATE. Native 68040 interaction, restart, persistence and
+malformed-file recovery have passed in an isolated AmiCradle lab. Review and
+independent UAT are still required before release.
+
+Requirements
+------------
+- AmigaOS 3.x
+- 68040 CPU
+- gfopenlayout.library version 18 or newer
+- an RTG Workbench suitable for the 900 x 760 editor window
+
+Included in this qualification build
+------------------------------------
+- native Amiga Hunk executable
+- GFOpenLayout/Intuition editor interface
+- New, Add Rectangle, Add Ellipse and Add Label actions
+- Undo, Redo, Select and Preview actions
+- bounded VCF1 Save and Open at PROGDIR:VectorCraft.vcf
+- clean rejection of truncated or malformed VCF1 input
+- bounded Rust document state
+- live native canvas, layer, status and Undo/Redo refresh after each edit
+- generated Installer and application/drawer/ReadMe GlowIcons
+
+The latest action is shown in the native status line and window title.
+Interactive zoom, complete upstream VectorCraft file compatibility and OpenGPU
+rendering are not claimed by this candidate.
+
+License: MIT OR Apache-2.0
