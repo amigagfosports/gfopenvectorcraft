@@ -62,10 +62,17 @@ The saved file SHA-256 was
 The malformed fixture SHA-256 was
 `8c197e8e71b3752430f941cd9d031262faf9bdef82534d703b1e1c3478670d68`.
 
-## Kitchen status
+## Forge Kitchen receipt
 
-The LumaVault and Cradle Kitchen calls both reached the shared checkout path,
-but the first full VectorCraft checkout (about 709 MB) exceeded the MCP call's
-timeout. The Forge mirror and branch resolved correctly. The checkout was
-restarted non-destructively to warm the clean Kitchen cache; a Forge-cooked
-plate receipt remains required before merge or release promotion.
+LumaVault Kitchen job `j20261122T032714-58bcad` cooked Forge commit
+`2ffcf04315c0d3193136092fc8c2361e6254815c` on the `os32` stove. The clean
+bigguy environment had no host Rust installation, so the Kitchen entry point
+installed and cached the pinned Rust 1.98.1 toolchain after verifying the
+published `rustup-init` SHA-256.
+
+The bigguy build repeated all eight host tests, clippy and the Amiga Hunk gate.
+It produced the same 35,664-byte executable and SHA-256 as the locally tested
+candidate, plus `README.txt` and `SHA256SUMS`.
+
+The immutable plate is published on the LumaVault shelf as
+`gfopenvectorcraft` version `0.1.0-rc1-2ffcf043`.
