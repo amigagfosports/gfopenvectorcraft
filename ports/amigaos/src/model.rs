@@ -29,6 +29,32 @@ impl Default for Limits {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AllocationSite {
+    DocumentName,
+    ArtboardName,
+    Artboards,
+    PathPoints,
+    Paths,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FormatStage {
+    UnsupportedDocument,
+    Magic,
+    DocumentName,
+    ArtboardName,
+    Width,
+    Height,
+    PathCount,
+    ClosedFlag,
+    PointCount,
+    PointX,
+    PointY,
+    TrailingData,
+    Framing,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ModelError {
     EmptyName,
     NameTooLong,
@@ -40,7 +66,9 @@ pub enum ModelError {
     PathLimit,
     PointLimit,
     IdExhausted,
-    OutOfMemory,
+    OutOfMemory(AllocationSite),
+    InvalidFormat(FormatStage),
+    BufferTooSmall,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -68,6 +96,15 @@ pub struct Document {
     limits: Limits,
 }
 
+/// One bounded file buffer and its exact populated length.
+///
+/// Passing this descriptor by one thin reference avoids the experimental
+/// m68k backend's broken multi-argument ABI for a fixed buffer plus `usize`.
+pub struct DecodeSource<'input> {
+    pub bytes: &'input [u8],
+    pub length: usize,
+}
+
 impl Document {
     pub fn new(name: &str, artboard_name: &str, width: f64, height: f64) -> Result<Self, ModelError> {
         Self::with_limits(name, artboard_name, width, height, Limits::default())
@@ -80,7 +117,7 @@ impl Document {
         if limits.artboards == 0 {
             return Err(ModelError::ArtboardLimit);
         }
-        let name = copy_name(name)?;
+        let name = copy_name(name, AllocationSite::DocumentName)?;
         let mut document = Self { name, artboards: Vec::new(), paths: Vec::new(), next_id: 1, limits };
         document.add_artboard(artboard_name, width, height)?;
         Ok(document)
@@ -96,6 +133,160 @@ impl Document {
 
     pub fn paths(&self) -> &[Path] {
         &self.paths
+    }
+
+    /// Encode the native editor subset without allocating.
+    ///
+    /// VCF1 deliberately covers one artboard, which is the bounded surface
+    /// exposed by the native 68k editor. Multi-artboard desktop documents are
+    /// rejected instead of being silently flattened.
+    pub fn encode(&self, output: &mut [u8]) -> Result<usize, ModelError> {
+        if self.artboards.len() != 1 || self.paths.len() > u16::MAX as usize {
+            return Err(ModelError::InvalidFormat(FormatStage::UnsupportedDocument));
+        }
+        let artboard = &self.artboards[0];
+        if !self.name.is_ascii() || !artboard.name.is_ascii() {
+            return Err(ModelError::InvalidFormat(FormatStage::UnsupportedDocument));
+        }
+        if self.paths.iter().any(|path| path.artboard_id != artboard.id || path.points.len() > u16::MAX as usize) {
+            return Err(ModelError::InvalidFormat(FormatStage::UnsupportedDocument));
+        }
+        let mut writer = Writer::new(output);
+        writer.bytes(b"VCF1")?;
+        writer.text(&self.name)?;
+        writer.text(&artboard.name)?;
+        writer.u64(artboard.width.to_bits())?;
+        writer.u64(artboard.height.to_bits())?;
+        writer.u16(self.paths.len() as u16)?;
+        for path in &self.paths {
+            writer.u8(u8::from(path.closed))?;
+            writer.u16(path.points.len() as u16)?;
+            for point in &path.points {
+                writer.u64(point.x.to_bits())?;
+                writer.u64(point.y.to_bits())?;
+            }
+        }
+        Ok(writer.len())
+    }
+
+    /// Decode one complete bounded VCF1 document.
+    pub fn decode(source: &DecodeSource<'_>) -> Result<Self, ModelError> {
+        let input = source.bytes;
+        let length = source.length;
+        if length > input.len() {
+            return Err(ModelError::InvalidFormat(FormatStage::Framing));
+        }
+        if length < 4 || input[0] != b'V' || input[1] != b'C' || input[2] != b'F' || input[3] != b'1' {
+            return Err(ModelError::InvalidFormat(FormatStage::Magic));
+        }
+        let mut cursor = 6_usize;
+        macro_rules! read_byte {
+            ($stage:expr) => {{
+                if cursor >= length {
+                    return Err(ModelError::InvalidFormat($stage));
+                }
+                let value = input[cursor];
+                cursor += 1;
+                value
+            }};
+        }
+        macro_rules! read_u16 {
+            ($stage:expr) => {{
+                let high = read_byte!($stage) as u16;
+                let low = read_byte!($stage) as u16;
+                (high << 8) | low
+            }};
+        }
+        macro_rules! read_u64 {
+            ($stage:expr) => {{
+                let end = cursor.checked_add(8).ok_or(ModelError::InvalidFormat($stage))?;
+                let bytes = input.get(cursor..end).ok_or(ModelError::InvalidFormat($stage))?;
+                cursor = end;
+                u64::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]])
+            }};
+        }
+
+        if length < 6 {
+            return Err(ModelError::InvalidFormat(FormatStage::DocumentName));
+        }
+        let name_length = ((input[4] as usize) << 8) | input[5] as usize;
+        if name_length == 0 || name_length > MAX_NAME_BYTES {
+            return Err(ModelError::InvalidFormat(FormatStage::DocumentName));
+        }
+        let mut name = String::new();
+        name.try_reserve_exact(name_length).map_err(|_| ModelError::OutOfMemory(AllocationSite::DocumentName))?;
+        let name_end = cursor.checked_add(name_length).ok_or(ModelError::InvalidFormat(FormatStage::DocumentName))?;
+        if name_end > length {
+            return Err(ModelError::InvalidFormat(FormatStage::DocumentName));
+        }
+        while cursor < name_end {
+            let byte = input[cursor];
+            if !byte.is_ascii() {
+                return Err(ModelError::InvalidFormat(FormatStage::DocumentName));
+            }
+            name.push(char::from(byte));
+            cursor += 1;
+        }
+
+        if cursor.checked_add(2).is_none_or(|end| end > length) {
+            return Err(ModelError::InvalidFormat(FormatStage::ArtboardName));
+        }
+        let artboard_name_length = ((input[cursor] as usize) << 8) | input[cursor + 1] as usize;
+        cursor += 2;
+        if artboard_name_length == 0 || artboard_name_length > MAX_NAME_BYTES {
+            return Err(ModelError::InvalidFormat(FormatStage::ArtboardName));
+        }
+        let mut artboard_name = String::new();
+        artboard_name.try_reserve_exact(artboard_name_length).map_err(|_| ModelError::OutOfMemory(AllocationSite::ArtboardName))?;
+        let artboard_name_end = cursor.checked_add(artboard_name_length).ok_or(ModelError::InvalidFormat(FormatStage::ArtboardName))?;
+        if artboard_name_end > length {
+            return Err(ModelError::InvalidFormat(FormatStage::ArtboardName));
+        }
+        while cursor < artboard_name_end {
+            let byte = input[cursor];
+            if !byte.is_ascii() {
+                return Err(ModelError::InvalidFormat(FormatStage::ArtboardName));
+            }
+            artboard_name.push(char::from(byte));
+            cursor += 1;
+        }
+
+        let width = f64::from_bits(read_u64!(FormatStage::Width));
+        let height = f64::from_bits(read_u64!(FormatStage::Height));
+        let path_count = read_u16!(FormatStage::PathCount) as usize;
+        if path_count > MAX_PATHS {
+            return Err(ModelError::PathLimit);
+        }
+        validate_extent(width, height)?;
+        let limits = Limits::default();
+        let mut artboards = Vec::new();
+        artboards.try_reserve_exact(1).map_err(|_| ModelError::OutOfMemory(AllocationSite::Artboards))?;
+        let artboard_id = 1;
+        artboards.push(Artboard { id: artboard_id, name: artboard_name, width, height });
+        let mut document = Self { name, artboards, paths: Vec::new(), next_id: 2, limits };
+        for _ in 0..path_count {
+            let closed = match read_byte!(FormatStage::ClosedFlag) {
+                0 => false,
+                1 => true,
+                _ => return Err(ModelError::InvalidFormat(FormatStage::ClosedFlag)),
+            };
+            let point_count = read_u16!(FormatStage::PointCount) as usize;
+            if point_count > document.limits.points_per_path {
+                return Err(ModelError::PointLimit);
+            }
+            let mut points = Vec::new();
+            points.try_reserve_exact(point_count).map_err(|_| ModelError::OutOfMemory(AllocationSite::PathPoints))?;
+            for _ in 0..point_count {
+                let x = f64::from_bits(read_u64!(FormatStage::PointX));
+                let y = f64::from_bits(read_u64!(FormatStage::PointY));
+                points.push(Point { x, y });
+            }
+            document.add_path(artboard_id, &points, closed)?;
+        }
+        if cursor != length {
+            return Err(ModelError::InvalidFormat(FormatStage::TrailingData));
+        }
+        Ok(document)
     }
 
     pub fn remove_last_path(&mut self) -> Option<Path> {
@@ -122,7 +313,7 @@ impl Document {
         if path.points.iter().any(|point| !point.x.is_finite() || !point.y.is_finite()) {
             return Err(ModelError::InvalidPoint);
         }
-        self.paths.try_reserve(1).map_err(|_| ModelError::OutOfMemory)?;
+        self.paths.try_reserve_exact(1).map_err(|_| ModelError::OutOfMemory(AllocationSite::Paths))?;
         self.paths.push(path);
         Ok(())
     }
@@ -132,8 +323,8 @@ impl Document {
             return Err(ModelError::ArtboardLimit);
         }
         validate_extent(width, height)?;
-        let name = copy_name(name)?;
-        self.artboards.try_reserve(1).map_err(|_| ModelError::OutOfMemory)?;
+        let name = copy_name(name, AllocationSite::ArtboardName)?;
+        self.artboards.try_reserve_exact(1).map_err(|_| ModelError::OutOfMemory(AllocationSite::Artboards))?;
         let id = self.take_id()?;
         self.artboards.push(Artboard { id, name, width, height });
         Ok(id)
@@ -157,9 +348,9 @@ impl Document {
             return Err(ModelError::InvalidPoint);
         }
         let mut owned = Vec::new();
-        owned.try_reserve_exact(points.len()).map_err(|_| ModelError::OutOfMemory)?;
+        owned.try_reserve_exact(points.len()).map_err(|_| ModelError::OutOfMemory(AllocationSite::PathPoints))?;
         owned.extend_from_slice(points);
-        self.paths.try_reserve(1).map_err(|_| ModelError::OutOfMemory)?;
+        self.paths.try_reserve_exact(1).map_err(|_| ModelError::OutOfMemory(AllocationSite::Paths))?;
         let id = self.take_id()?;
         self.paths.push(Path { id, artboard_id, points: owned, closed });
         Ok(id)
@@ -172,7 +363,7 @@ impl Document {
     }
 }
 
-fn copy_name(name: &str) -> Result<String, ModelError> {
+fn copy_name(name: &str, site: AllocationSite) -> Result<String, ModelError> {
     if name.is_empty() {
         return Err(ModelError::EmptyName);
     }
@@ -180,13 +371,54 @@ fn copy_name(name: &str) -> Result<String, ModelError> {
         return Err(ModelError::NameTooLong);
     }
     let mut owned = String::new();
-    owned.try_reserve_exact(name.len()).map_err(|_| ModelError::OutOfMemory)?;
+    owned.try_reserve_exact(name.len()).map_err(|_| ModelError::OutOfMemory(site))?;
     owned.push_str(name);
     Ok(owned)
 }
 
 fn validate_extent(width: f64, height: f64) -> Result<(), ModelError> {
     if width.is_finite() && height.is_finite() && width > 0.0 && height > 0.0 { Ok(()) } else { Err(ModelError::InvalidExtent) }
+}
+
+struct Writer<'buffer> {
+    output: &'buffer mut [u8],
+    cursor: usize,
+}
+
+impl<'buffer> Writer<'buffer> {
+    fn new(output: &'buffer mut [u8]) -> Self {
+        Self { output, cursor: 0 }
+    }
+
+    fn len(&self) -> usize {
+        self.cursor
+    }
+
+    fn bytes(&mut self, bytes: &[u8]) -> Result<(), ModelError> {
+        let end = self.cursor.checked_add(bytes.len()).ok_or(ModelError::BufferTooSmall)?;
+        let target = self.output.get_mut(self.cursor..end).ok_or(ModelError::BufferTooSmall)?;
+        target.copy_from_slice(bytes);
+        self.cursor = end;
+        Ok(())
+    }
+
+    fn u8(&mut self, value: u8) -> Result<(), ModelError> {
+        self.bytes(&[value])
+    }
+
+    fn u16(&mut self, value: u16) -> Result<(), ModelError> {
+        self.bytes(&value.to_be_bytes())
+    }
+
+    fn u64(&mut self, value: u64) -> Result<(), ModelError> {
+        self.bytes(&value.to_be_bytes())
+    }
+
+    fn text(&mut self, value: &str) -> Result<(), ModelError> {
+        let length = u16::try_from(value.len()).map_err(|_| ModelError::NameTooLong)?;
+        self.u16(length)?;
+        self.bytes(value.as_bytes())
+    }
 }
 
 #[cfg(test)]
@@ -244,6 +476,33 @@ mod tests {
         assert!(document.paths().is_empty());
         document.restore_path(removed)?;
         assert_eq!(document.paths()[0].id, id);
+        Ok(())
+    }
+
+    #[test]
+    fn vcf1_round_trips_the_native_document_subset() -> Result<(), ModelError> {
+        let mut document = Document::new("Poster", "Board", 420.0, 500.0)?;
+        let artboard = document.artboards()[0].id;
+        document.add_path(artboard, &[Point { x: 1.0, y: 2.0 }, Point { x: 30.5, y: 4.25 }, Point { x: 5.0, y: 60.0 }], true)?;
+        let mut bytes = [0_u8; 1024];
+        let length = document.encode(&mut bytes)?;
+        let decoded = Document::decode(&DecodeSource { bytes: &bytes, length })?;
+        assert_eq!(decoded.name(), "Poster");
+        assert_eq!(decoded.artboards()[0].name, "Board");
+        assert_eq!((decoded.artboards()[0].width, decoded.artboards()[0].height), (420.0, 500.0));
+        assert_eq!(decoded.paths()[0].points, document.paths()[0].points);
+        assert!(decoded.paths()[0].closed);
+        Ok(())
+    }
+
+    #[test]
+    fn vcf1_rejects_truncation_and_trailing_data() -> Result<(), ModelError> {
+        let document = Document::new("Doc", "Board", 1.0, 1.0)?;
+        let mut bytes = [0_u8; 128];
+        let length = document.encode(&mut bytes)?;
+        assert_eq!(Document::decode(&DecodeSource { bytes: &bytes, length: length - 1 }), Err(ModelError::InvalidFormat(FormatStage::PathCount)));
+        bytes[length] = 0;
+        assert_eq!(Document::decode(&DecodeSource { bytes: &bytes, length: length + 1 }), Err(ModelError::InvalidFormat(FormatStage::TrailingData)));
         Ok(())
     }
 

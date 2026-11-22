@@ -4,16 +4,19 @@ set -eu
 
 port=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$port/../.." && pwd)
-tool_dir=${1:?usage: package-rc.sh /path/to/m68k-amigaos-bin}
+stove=${1:?usage: package-rc.sh /path/to/os32-stove}
+tool_dir="$stove/prefix/bin"
 name=GFOpenVectorCraft-0.1.0-rc1
 dist="$root/dist/amigaos"
 drawer="$dist/$name"
 
-test -x "$tool_dir/m68k-amigaos-ld"
+test -x "$tool_dir/vlink"
+test -x "$tool_dir/m68k-amigaos-as"
 test -x "$tool_dir/m68k-amigaos-nm"
 
 M68K_AMIGA_HUNK=1 \
-M68K_REAL_LINKER="$tool_dir/m68k-amigaos-ld" \
+M68K_REAL_LINKER="$tool_dir/vlink" \
+M68K_AS="$tool_dir/m68k-amigaos-as" \
 M68K_NM="$tool_dir/m68k-amigaos-nm" \
 M68K_LINK_TMPDIR="$port/target-hunk/link-tmp" \
 CARGO_TARGET_DIR="$port/target-hunk" \

@@ -13,12 +13,14 @@ properties and appearance panels. The working commands are:
 - Add Rectangle, Add Ellipse and Add Label;
 - Undo and Redo;
 - Select and Preview mode;
+- bounded VCF1 Save to `SYS:VectorCraft.vcf`;
+- bounded VCF1 Open from `SYS:VectorCraft.vcf`, including clean rejection of
+  malformed and truncated files;
 - native window close and clean AmigaDOS return (release gate; native proof required).
 
 Each editing command changes the bounded Rust document state and refreshes the
 native canvas, layer list, Undo/Redo controls, status line and window title.
-Open, Save and interactive zoom are deliberately disabled and labelled as RC2
-work.
+Interactive zoom remains disabled and labelled as later work.
 
 The packaging script creates an RC-shaped test archive, but the archive must
 not be published or promoted until native pointer actions and close have both
@@ -39,7 +41,10 @@ M68K_NM=/path/to/bin/m68k-amigaos-nm \
 ports/amigaos/check.sh
 ```
 
-`ports/amigaos/package-rc.sh /path/to/bin` produces the install drawer, LHA
+`ports/amigaos/build-amiga.sh` is the Kitchen entry point. It stages a plate
+containing the native executable, release notes and checksums in `$OUT`.
+
+`ports/amigaos/package-rc.sh /path/to/os32-stove` produces the install drawer, LHA
 archive and SHA-256 manifest under `dist/amigaos/`.
 
 The port is MIT OR Apache-2.0, matching VectorCraft upstream. Its GFOpenRust

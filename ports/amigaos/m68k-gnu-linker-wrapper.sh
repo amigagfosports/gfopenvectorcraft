@@ -4,10 +4,16 @@ set -euo pipefail
 
 linker=${M68K_REAL_LINKER:-m68k-linux-gnu-ld}
 hunk=${M68K_AMIGA_HUNK:-0}
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+vlink_hunk=0
+if [[ $hunk == 1 && $(basename -- "$linker") == vlink ]]; then
+    vlink_hunk=1
+fi
 filtered=()
-if [[ $hunk == 1 ]]; then
-    script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [[ $hunk == 1 && $vlink_hunk == 0 ]]; then
     filtered+=("-T" "$script_dir/amiga-hunk.ld")
+elif [[ $vlink_hunk == 1 ]]; then
+    filtered+=("-b" "amigahunk" "-Rshort" "-k")
 fi
 for argument in "$@"; do
     case $argument in
@@ -18,6 +24,20 @@ for argument in "$@"; do
             for option in "${forwarded[@]}"; do
                 case $hunk:$option in
                     1:--as-needed|1:-Bstatic|1:-Bdynamic|1:--eh-frame-hdr|1:-z|1:noexecstack)
+                        ;;
+                    1:--gc-sections)
+                        if [[ $vlink_hunk == 1 ]]; then
+                            filtered+=("-gc-all")
+                        else
+                            filtered+=("$option")
+                        fi
+                        ;;
+                    1:--strip-debug)
+                        if [[ $vlink_hunk == 1 ]]; then
+                            filtered+=("-S")
+                        else
+                            filtered+=("$option")
+                        fi
                         ;;
                     *)
                         filtered+=("$option")
@@ -31,7 +51,7 @@ for argument in "$@"; do
     esac
 done
 
-if [[ $hunk == 1 ]]; then
+if [[ $hunk == 1 && $vlink_hunk == 0 ]]; then
     # The Amiga BFD backend only emits LoadSeg relocation hunks when its input
     # objects are Amiga Hunk objects.  Rust produces ELF relocatables, so make
     # temporary, equivalent Hunk objects (and archives) before the final link.
@@ -80,6 +100,24 @@ if [[ $hunk == 1 ]]; then
         index=$((index + 1))
     done
     filtered=("${converted[@]}" "--emit-relocs")
+fi
+
+if [[ $vlink_hunk == 1 ]]; then
+    # AmigaDOS has no independent entry-address field: execution starts at
+    # byte zero of the first CODE hunk.  Rust/LTO may put another .text
+    # section before .text.startup, so prepend a six-byte relocation-safe
+    # jump to the runtime's _start symbol.
+    link_tmp_root=${M68K_LINK_TMPDIR:-${TMPDIR:-/tmp}}
+    mkdir -p -- "$link_tmp_root"
+    temporary=$(mktemp -d "$link_tmp_root/m68k-vlink-entry.XXXXXX")
+    trap 'rm -rf -- "$temporary"' EXIT
+    assembler=${M68K_AS:-m68k-linux-gnu-as}
+    "$assembler" -m68040 -o "$temporary/amiga-hunk-entry.o" \
+        "$script_dir/amiga-hunk-entry.S"
+    filtered=("$temporary/amiga-hunk-entry.o" "${filtered[@]}" \
+        "-e" "__amiga_hunk_entry")
+    "$linker" "${filtered[@]}"
+    exit $?
 fi
 
 exec "$linker" "${filtered[@]}"
