@@ -119,3 +119,17 @@ Its timestamp before and after the update was
 `2026-11-22 11:04:17.961684810 +0000`. The installed executable after the
 update remained 35,752 bytes with SHA-256
 `f3559309aeb04a7584fd071fba7b3857d5085e6fbed7a8b9868cdcb201f67362`.
+
+## RC2 Kitchen receipt
+
+LumaVault Kitchen job `j20261122T115310-ac18cd` cooked exact commit
+`9b4343ed323450ba7b261872b205865d0bb11551` on the `os32` stove with target
+`package`. It repeated all eight tests, clippy, the Hunk and symbol gates, and
+plate staging before creating the LhA archive. The job exited 0.
+
+The Kitchen output `GFOpenVectorCraft-0.1.0-rc2-68040.lha` is 44,556 bytes
+with SHA-256
+`1878339cec757300f588250ecd5bf3ab309d1dd80f8bdbd88a7b1898e7c1997f`.
+The archive hash differs from the native-UAT copy because LhA records archive
+metadata. Unpacking both archives produced byte-identical file trees, including
+the same 35,752-byte Hunk and its SHA-256 above.
